@@ -10,5 +10,5 @@ yarn
 
 ```bash
 yarn dev
-# then visist http://localhost:3000
+# then visit http://localhost:3000
 ```

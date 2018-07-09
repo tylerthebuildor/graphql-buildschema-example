@@ -23,18 +23,18 @@ const db = {
 const schema = buildSchema(`
   type Query {
     users: [User]
-    user(id: String!): User
+    user(id: ID!): User
     organizations: [Organization]
-    organization(id: String!): Organization
+    organization(id: ID!): Organization
   }
   type User {
     organization: Organization
-    id: String
+    id: ID
     name: String
   }
   type Organization {
     users: [User]
-    id: String
+    id: ID
     name: String
     phone: String
   }
@@ -66,6 +66,14 @@ class Organization {
       .filter(({ id }) => this.userIds.includes(id))
       .map(user => new User(user));
   }
+
+  // Replace with above to try out async method
+  // async users() {
+  //   await new Promise(resolve => setTimeout(resolve, 5000));
+  //   return db.users
+  //     .filter(({ id })=> this.userIds.includes(id))
+  //     .map(user => new User(user));
+  // }
 }
 
 const rootValue = {
