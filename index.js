@@ -21,6 +21,9 @@ const db = {
 };
 
 const schema = buildSchema(`
+  type Mutation {
+    signup(organization, id, name): User
+  }
   type Query {
     users: [User]
     user(id: ID!): User
@@ -77,18 +80,25 @@ class Organization {
 }
 
 const rootValue = {
-  users: () => {
+  signup({ organization, id, name }) {
+    const user = { organization, id, name };
+    const match = db.users.find(user => name);
+    if (match) throw Error('This username already exists');
+    db.users.push(user);
+    return new User(user);
+  },
+  users() {
     return db.users.map(user => new User(user));
   },
-  user: ({ id }) => {
+  user({ id }) => {
     return new User(db.users.find(user => user.id === id));
   },
-  organizations: () => {
+  organizations() {
     return db
       .organizations
       .map(organization => new Organization(organization));
   },
-  organization: ({ id }) => {
+  organization({ id }) => {
     const organization = db
       .organizations
       .find(organization => organization.id === id);
