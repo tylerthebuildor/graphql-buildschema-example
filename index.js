@@ -90,7 +90,7 @@ const rootValue = {
   users() {
     return db.users.map(user => new User(user));
   },
-  user({ id }) => {
+  user({ id }) {
     return new User(db.users.find(user => user.id === id));
   },
   organizations() {
@@ -98,7 +98,7 @@ const rootValue = {
       .organizations
       .map(organization => new Organization(organization));
   },
-  organization({ id }) => {
+  organization({ id }) {
     const organization = db
       .organizations
       .find(organization => organization.id === id);
