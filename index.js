@@ -1,5 +1,8 @@
 const server = require('express-graphql');
 const { buildSchema } = require('graphql');
+const jwt = require('jsonwebtoken');
+
+const jwtSecret = 'makethislongandrandom';
 
 // This could also be MongoDB, PostgreSQL, etc
 const db = {
@@ -8,6 +11,7 @@ const db = {
       organization: '123', // this is a relation by id
       id: 'abc',
       name: 'Elon Musk',
+      password: 'password123',
     }
   ],
   organizations: [
@@ -22,9 +26,11 @@ const db = {
 
 const schema = buildSchema(`
   type Mutation {
-    signup(organization, id, name): User
+    signup(organization:String, id:String, name:String): User
   }
   type Query {
+    login(username:String, password:String): String
+    tellMeADadJoke: String
     users: [User]
     user(id: ID!): User
     organizations: [Organization]
@@ -80,12 +86,25 @@ class Organization {
 }
 
 const rootValue = {
-  signup({ organization, id, name }) {
-    const user = { organization, id, name };
-    const match = db.users.find(user => name);
+  signup({ organization, id, name, password }) {
+    const user = { organization, id, name, password };
+    const match = db.users.find(user => user.name === name);
     if (match) throw Error('This username already exists');
     db.users.push(user);
     return new User(user);
+  },
+  login({ username, password }) {
+    const user = db.users.find(user => user.name === username);
+    const incorrectPassword = user.password !== password;
+    if (!user || incorrectPassword) {
+      throw Error('username or password was incorrect');
+    }
+    const token = jwt.sign({ id: user.id }, jwtSecret);
+    return token;
+  },
+  tellMeADadJoke(data, { user }) {
+    if (!user) throw Error('not authorized');
+    return 'If you see a robbery at an Apple Store does that make you an iWitness?';
   },
   users() {
     return db.users.map(user => new User(user));
@@ -107,8 +126,34 @@ const rootValue = {
   },
 };
 
-module.exports = server({
-  schema,
-  rootValue,
-  graphiql: true,
-});
+module.exports = server(
+  attachJwt(jwtSecret)(req => {
+    return ({
+      schema,
+      rootValue,
+      graphiql: true,
+      context: { user: req.jwt },
+    })
+  })
+);
+
+function attachJwt(secret) {
+  return function(fn) {
+    return (req, res, next) => {
+      const bearerToken = process.env.NODE_ENV === 'production'
+        ? req.headers.authorization
+        : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFiYyIsImlhdCI6MTUzMjQ1NDE4MH0.U2IXOLpKqcPLCtzIasl_U8cK_I5tDMAW_CPN5szzhwA';
+
+      if (bearerToken) {
+        try {
+          const token = bearerToken.replace('Bearer ', '');
+          req.jwt = jwt.verify(token, secret);
+        } catch(error) {
+          console.log(error);
+        }
+      }
+  
+      return fn(req, res, next)
+    }
+  }
+}
